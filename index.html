@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imposter Game</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5a2ea6">
+  <link rel="icon" href="icon-192.png" type="image/png">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: radial-gradient(circle at center, #2e004f 0%, #0b0015 100%);
+      color: white;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      text-shadow: 0 0 20px #a86eff;
+      animation: glow 2s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 10px #a86eff; }
+      to { text-shadow: 0 0 25px #ffb3ff; }
+    }
+
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .player {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #a86eff;
+      border-radius: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .player:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px #ffb3ff;
+    }
+
+    .vote-button {
+      margin-top: 30px;
+      padding: 15px 30px;
+      background: linear-gradient(90deg, #a86eff, #ffb3ff);
+      border: none;
+      border-radius: 30px;
+      color: #fff;
+      font-size: 1.2em;
+      cursor: pointer;
+      box-shadow: 0 0 20px #a86eff;
+      transition: transform 0.2s;
+    }
+
+    .vote-button:hover {
+      transform: scale(1.05);
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 1.5em;
+      text-shadow: 0 0 10px #ffb3ff;
+    }
+  </style>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
+    }
+
+    const players = ["Twilight", "Rainbow", "Applejack", "Fluttershy", "Pinkie", "Rarity"];
+    let votes = {};
+    let imposter = players[Math.floor(Math.random() * players.length)];
+
+    function playSound(name) {
+      const audio = new Audio(name);
+      audio.play();
+    }
+
+    function renderPlayers() {
+      const container = document.querySelector('.player-list');
+      container.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player';
+        div.textContent = p;
+        div.onclick = () => vote(p);
+        container.appendChild(div);
+      });
+    }
+
+    function vote(player) {
+      playSound('vote.mp3');
+      votes[player] = (votes[player] || 0) + 1;
+      document.querySelector('.result').textContent = `${player} got a vote!`;
+    }
+
+    function reveal() {
+      playSound('reveal.mp3');
+      let maxVotes = Math.max(...Object.values(votes));
+      let topPlayers = Object.keys(votes).filter(p => votes[p] === maxVotes);
+      let resultText = '';
+
+      if (topPlayers.length > 1) {
+        resultText = `It's a tie! Revote between ${topPlayers.join(', ')}.`;
+      } else {
+        let chosen = topPlayers[0];
+        resultText = chosen === imposter
+          ? `🎉 ${chosen} was the Imposter!`
+          : `😱 ${chosen} was innocent! The Imposter was ${imposter}.`;
+      }
+
+      document.querySelector('.result').textContent = resultText;
+    }
+
+    window.onload = () => {
+      renderPlayers();
+      document.querySelector('.vote-button').onclick = reveal;
+    };
+  </script>
+</head>
+
+<body>
+  <h1>Imposter Game 🔍</h1>
+  <div class="player-list"></div>
+  <button class="vote-button">Reveal Results</button>
+  <div class="result"></div>
+</body>
+</html>
