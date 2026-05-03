@@ -9,137 +9,547 @@
   <link rel="icon" href="icon-192.png" type="image/png">
 
   <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: radial-gradient(circle at center, #2e004f 0%, #0b0015 100%);
-      color: white;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
+/* -------------------------
+   GLOBAL UI
+-------------------------- */
+body {
+    font-family: Arial, sans-serif;
+    background: #5a2ea6;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin: 0;
+    animation: fadeIn 0.8s ease-out;
+}
 
-    h1 {
-      font-size: 2.5em;
-      text-shadow: 0 0 20px #a86eff;
-      animation: glow 2s infinite alternate;
-    }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-    @keyframes glow {
-      from { text-shadow: 0 0 10px #a86eff; }
-      to { text-shadow: 0 0 25px #ffb3ff; }
-    }
+#container {
+    max-width: 700px;
+    margin: auto;
+    background: #7b42d1;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 0 20px rgba(255,255,255,0.15);
+    animation: popIn 0.6s ease-out;
+}
 
-    .player-list {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
+@keyframes popIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
 
-    .player {
-      background: rgba(255,255,255,0.1);
-      border: 2px solid #a86eff;
-      border-radius: 10px;
-      padding: 10px 20px;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
+textarea, input, select, button {
+    padding: 12px;
+    margin: 10px 0;
+    width: 90%;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    box-sizing: border-box;
+    transition: 0.2s;
+}
 
-    .player:hover {
-      transform: scale(1.1);
-      box-shadow: 0 0 15px #ffb3ff;
-    }
+button {
+    background: #b57bff;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    animation: glowPulse 2s infinite ease-in-out;
+}
 
-    .vote-button {
-      margin-top: 30px;
-      padding: 15px 30px;
-      background: linear-gradient(90deg, #a86eff, #ffb3ff);
-      border: none;
-      border-radius: 30px;
-      color: #fff;
-      font-size: 1.2em;
-      cursor: pointer;
-      box-shadow: 0 0 20px #a86eff;
-      transition: transform 0.2s;
-    }
+button:hover {
+    background: #c89aff;
+    transform: scale(1.05);
+}
 
-    .vote-button:hover {
-      transform: scale(1.05);
-    }
+@keyframes glowPulse {
+    0% { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+    50% { box-shadow: 0 0 18px rgba(255,255,255,0.35); }
+    100% { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+}
 
-    .result {
-      margin-top: 20px;
-      font-size: 1.5em;
-      text-shadow: 0 0 10px #ffb3ff;
-    }
-  </style>
+.hidden { display: none; }
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js");
-    }
+/* -------------------------
+   VOTING UI
+-------------------------- */
+.playerVote {
+    background: #6d3bb8;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    animation: fadeIn 0.4s ease-out;
+}
 
-    const players = ["Twilight", "Rainbow", "Applejack", "Fluttershy", "Pinkie", "Rarity"];
-    let votes = {};
-    let imposter = players[Math.floor(Math.random() * players.length)];
+.playerVote:hover {
+    background: #8250d4;
+    transform: scale(1.03);
+}
 
-    function playSound(name) {
-      const audio = new Audio(name);
-      audio.play();
-    }
+.selectedVote {
+    background: #d63384 !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
 
-    function renderPlayers() {
-      const container = document.querySelector('.player-list');
-      container.innerHTML = '';
-      players.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'player';
-        div.textContent = p;
-        div.onclick = () => vote(p);
-        container.appendChild(div);
-      });
-    }
+/* Bounce Pop Animation */
+@keyframes votePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
 
-    function vote(player) {
-      playSound('vote.mp3');
-      votes[player] = (votes[player] || 0) + 1;
-      document.querySelector('.result').textContent = `${player} got a vote!`;
-    }
+.votePop {
+    animation: votePop 0.25s ease-out;
+}
 
-    function reveal() {
-      playSound('reveal.mp3');
-      let maxVotes = Math.max(...Object.values(votes));
-      let topPlayers = Object.keys(votes).filter(p => votes[p] === maxVotes);
-      let resultText = '';
-
-      if (topPlayers.length > 1) {
-        resultText = `It's a tie! Revote between ${topPlayers.join(', ')}.`;
-      } else {
-        let chosen = topPlayers[0];
-        resultText = chosen === imposter
-          ? `🎉 ${chosen} was the Imposter!`
-          : `😱 ${chosen} was innocent! The Imposter was ${imposter}.`;
-      }
-
-      document.querySelector('.result').textContent = resultText;
-    }
-
-    window.onload = () => {
-      renderPlayers();
-      document.querySelector('.vote-button').onclick = reveal;
-    };
-  </script>
+#swipeHint {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-top: 5px;
+    animation: fadeIn 1s ease-out;
+}
+</style>
 </head>
-
 <body>
-  <h1>Imposter Game 🔍</h1>
-  <div class="player-list"></div>
-  <button class="vote-button">Reveal Results</button>
-  <div class="result"></div>
+
+<div id="container">
+
+<h1>Imposter Game</h1>
+
+<!-- SETUP -->
+<div id="setup">
+    <h2>Enter Player Names</h2>
+    <textarea id="playersInput" rows="6" placeholder="One name per line"></textarea>
+
+    <h3>Choose Word Pack</h3>
+    <select id="wordPack">
+        <option value="random">Random Mega Pack</option>
+        <option value="food">Food</option>
+        <option value="animals">Animals</option>
+        <option value="movies">Movies</option>
+        <option value="countries">Countries</option>
+        <option value="jobs">Jobs</option>
+        <option value="objects">Objects</option>
+        <option value="myLittlePony">My Little Pony</option>
+        <option value="minecraft">Minecraft</option>
+    </select>
+
+    <h3>Number of Imposters</h3>
+    <input id="imposterCount" type="number" min="1" max="3" value="1">
+
+    <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- REVEAL SECTION -->
+<div id="revealSection" class="hidden">
+    <h2 id="currentPlayerName"></h2>
+    <button onclick="revealRole()">Tap to Reveal</button>
+    <p id="swipeHint">or swipe up</p>
+    <p id="roleOutput" style="font-size: 22px; margin-top: 20px;"></p>
+    <button id="nextPlayerBtn" class="hidden" onclick="nextPlayer()">Next Player</button>
+</div>
+
+<!-- GAME WORD INFO -->
+<div id="gameWordSection" class="hidden">
+    <h2>Ready to Vote?</h2>
+    <p>The word and hint will be revealed when voting begins.</p>
+    <button onclick="startVoting()">Start Voting</button>
+</div>
+
+<!-- VOTING SECTION -->
+<div id="votingSection" class="hidden">
+    <h2 id="voteTitle">Who is the Imposter?</h2>
+    <p><strong>Word:</strong> <span id="finalWord"></span></p>
+    <p><strong>Hint:</strong> <span id="finalHint"></span></p>
+    <div id="voteList"></div>
+    <button onclick="finishVoting()">Finish Voting</button>
+</div>
+
+<!-- SUMMARY -->
+<div id="summarySection" class="hidden">
+    <h2>Game Summary</h2>
+    <p><strong>Word:</strong> <span id="summaryWord"></span></p>
+    <p><strong>Hint:</strong> <span id="summaryHint"></span></p>
+    <p><strong>Imposters:</strong> <span id="summaryImposters"></span></p>
+    <p><strong>Votes:</strong></p>
+    <p id="voteResults"></p>
+</div>
+
+</div>
+<script>
+/* -------------------------
+   SOUND EFFECTS (Base64 WAV)
+-------------------------- */
+
+/* Sparkly Reveal Chime */
+const sfxReveal = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAAAgICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICAf39/gICA");
+
+/* Imposter Alert */
+const sfxImposter = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAAA////AP8A////AP8A");
+
+/* Click */
+const sfxClick = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAAAAP8A/wD/AP8A");
+
+/* Ding (vote sound) */
+const sfxVote = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAAA////AP8A////AP8A");
+
+/* Safe play wrapper */
+function play(sound) {
+    try {
+        sound.currentTime = 0;
+        sound.play();
+    } catch (e) {}
+}
+
+/* -------------------------
+   GAME VARIABLES
+-------------------------- */
+let players = [];
+let imposters = [];
+let secretWord = "";
+let imposterHint = "";
+let currentPlayer = 0;
+let votes = {};
+let touchStartY = 0;
+
+let revotePlayers = null;
+let voteRound = 1;
+
+/* -------------------------
+   WORD PACKS
+-------------------------- */
+const wordPacks = {
+    random: [
+        { word: "PIZZA", hint: "Food" },
+        { word: "ELEPHANT", hint: "Animal" },
+        { word: "BICYCLE", hint: "Transport" },
+        { word: "PYRAMID", hint: "Structure" },
+        { word: "RAINBOW", hint: "Sky" },
+        { word: "VAMPIRE", hint: "Mythical" },
+        { word: "SOCCER", hint: "Sport" },
+        { word: "SPACESHIP", hint: "Sci‑Fi" },
+        { word: "BANANA", hint: "Fruit" },
+        { word: "DRAGON", hint: "Fantasy" },
+        { word: "CASTLE", hint: "Building" },
+        { word: "ROBOT", hint: "Machine" },
+        { word: "TELESCOPE", hint: "Science" },
+        { word: "OCEAN", hint: "Water" },
+        { word: "PILOT", hint: "Job" },
+        { word: "DOCTOR", hint: "Job" },
+        { word: "SPIDER", hint: "Creepy" },
+        { word: "CLOUD", hint: "Sky" },
+        { word: "TRAIN", hint: "Transport" },
+        { word: "KEYBOARD", hint: "Object" }
+    ],
+
+    food: [
+        { word: "BURGER", hint: "Fast Food" },
+        { word: "SUSHI", hint: "Japanese" },
+        { word: "PANCAKE", hint: "Breakfast" },
+        { word: "SPAGHETTI", hint: "Pasta" },
+        { word: "CHOCOLATE", hint: "Sweet" }
+    ],
+
+    animals: [
+        { word: "TIGER", hint: "Striped" },
+        { word: "KANGAROO", hint: "Jumps" },
+        { word: "DOLPHIN", hint: "Ocean" },
+        { word: "OWL", hint: "Night" },
+        { word: "PENGUIN", hint: "Cold" }
+    ],
+
+    movies: [
+        { word: "INCEPTION", hint: "Dreams" },
+        { word: "TITANIC", hint: "Ship" },
+        { word: "AVATAR", hint: "Blue" },
+        { word: "JURASSIC PARK", hint: "Dinosaurs" },
+        { word: "THE MATRIX", hint: "Simulation" }
+    ],
+
+    countries: [
+        { word: "FRANCE", hint: "Eiffel Tower" },
+        { word: "JAPAN", hint: "Sushi" },
+        { word: "BRAZIL", hint: "Carnival" },
+        { word: "EGYPT", hint: "Pyramids" },
+        { word: "CANADA", hint: "Cold" }
+    ],
+
+    jobs: [
+        { word: "TEACHER", hint: "School" },
+        { word: "FIREFIGHTER", hint: "Brave" },
+        { word: "CHEF", hint: "Kitchen" },
+        { word: "SCIENTIST", hint: "Lab" },
+        { word: "ARTIST", hint: "Creative" }
+    ],
+
+    objects: [
+        { word: "TELESCOPE", hint: "Stars" },
+        { word: "UMBRELLA", hint: "Rain" },
+        { word: "LAPTOP", hint: "Tech" },
+        { word: "BACKPACK", hint: "Carry" },
+        { word: "MICROSCOPE", hint: "Small" }
+    ],
+
+    myLittlePony: [
+        { word: "FRIENDSHIP", hint: "Magic" },
+        { word: "CUTIE MARK", hint: "Symbol" },
+        { word: "PEGASUS", hint: "Wings" },
+        { word: "UNICORN", hint: "Horn" },
+        { word: "EARTH PONY", hint: "No magic" },
+        { word: "ELEMENTS", hint: "Harmony" },
+        { word: "CLOUDSDALE", hint: "Sky city" },
+        { word: "POTION", hint: "Brew" },
+        { word: "CRYSTAL", hint: "Shiny" },
+        { word: "QUILL", hint: "Writing" },
+        { word: "BARN", hint: "Farm" },
+        { word: "PARTY CANNON", hint: "Celebration" },
+        { word: "APPLE ORCHARD", hint: "Trees" },
+        { word: "SPELLBOOK", hint: "Magic" },
+        { word: "CUPCAKE", hint: "Sweet" }
+    ],
+
+    minecraft: [
+        { word: "CREEPER", hint: "Explodes" },
+        { word: "DIAMOND", hint: "Rare" },
+        { word: "ENDER PEARL", hint: "Teleport" },
+        { word: "NETHER", hint: "Fire" },
+        { word: "PICKAXE", hint: "Mining" },
+        { word: "CRAFTING TABLE", hint: "Build" },
+        { word: "REDSTONE", hint: "Power" },
+        { word: "VILLAGER", hint: "Trades" },
+        { word: "ZOMBIE", hint: "Undead" },
+        { word: "SKELETON", hint: "Bow" },
+        { word: "PORTAL", hint: "Purple" },
+        { word: "TORCH", hint: "Light" },
+        { word: "FURNACE", hint: "Smelt" },
+        { word: "SHIELD", hint: "Block" },
+        { word: "ARMOR", hint: "Protection" },
+        { word: "BED", hint: "Respawn" },
+        { word: "CHEST", hint: "Storage" },
+        { word: "WHEAT", hint: "Farm" },
+        { word: "BOAT", hint: "Water" },
+        { word: "WOLF", hint: "Tame" }
+    ]
+};
+
+/* -------------------------
+   GAME FLOW
+-------------------------- */
+
+function startGame() {
+    play(sfxClick);
+
+    const input = document.getElementById("playersInput").value.trim();
+    if (!input) return alert("Enter at least 3 players");
+
+    players = input.split("\n").map(p => p.trim()).filter(p => p.length > 0);
+    if (players.length < 3) return alert("Need at least 3 players");
+
+    const packKey = document.getElementById("wordPack").value;
+    const pack = wordPacks[packKey];
+    if (!pack || pack.length === 0) return alert("No words in this pack.");
+
+    const chosen = pack[Math.floor(Math.random() * pack.length)];
+    secretWord = chosen.word;
+    imposterHint = chosen.hint;
+
+    let imposterCount = parseInt(document.getElementById("imposterCount").value, 10);
+    if (isNaN(imposterCount)) imposterCount = 1;
+    imposterCount = Math.min(Math.max(1, imposterCount), players.length - 1);
+
+    imposters = [];
+    while (imposters.length < imposterCount) {
+        const idx = Math.floor(Math.random() * players.length);
+        if (!imposters.includes(idx)) imposters.push(idx);
+    }
+
+    currentPlayer = 0;
+    votes = {};
+    revotePlayers = null;
+    voteRound = 1;
+
+    document.getElementById("setup").classList.add("hidden");
+    document.getElementById("revealSection").classList.remove("hidden");
+    updatePlayerName();
+}
+
+function updatePlayerName() {
+    document.getElementById("currentPlayerName").innerText =
+        players[currentPlayer] + ", tap or swipe up to reveal";
+}
+
+function revealRole() {
+    play(sfxReveal);
+
+    const output = document.getElementById("roleOutput");
+
+    if (imposters.includes(currentPlayer)) {
+        play(sfxImposter);
+        output.innerHTML = "<strong>You are an IMPOSTER!</strong><br>Hint: " + imposterHint;
+    } else {
+        output.innerHTML = "Your word is: <strong>" + secretWord + "</strong>";
+    }
+
+    document.getElementById("nextPlayerBtn").classList.remove("hidden");
+}
+
+function nextPlayer() {
+    play(sfxClick);
+
+    document.getElementById("roleOutput").innerHTML = "";
+    document.getElementById("nextPlayerBtn").classList.add("hidden");
+
+    currentPlayer++;
+
+    if (currentPlayer >= players.length) {
+        document.getElementById("revealSection").classList.add("hidden");
+        document.getElementById("gameWordSection").classList.remove("hidden");
+        return;
+    }
+
+    updatePlayerName();
+}
+
+/* -------------------------
+   SWIPE TO REVEAL
+-------------------------- */
+
+document.addEventListener("touchstart", e => {
+    if (!e.touches || e.touches.length === 0) return;
+    touchStartY = e.touches[0].clientY;
+});
+
+document.addEventListener("touchend", e => {
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
+    const endY = e.changedTouches[0].clientY;
+    const diff = touchStartY - endY;
+
+    if (diff > 50 && !document.getElementById("revealSection").classList.contains("hidden")) {
+        revealRole();
+    }
+});
+/* -------------------------
+   VOTING WITH LIVE COUNTERS + TIE‑BREAKER
+-------------------------- */
+
+function startVoting() {
+    play(sfxClick);
+
+    document.getElementById("gameWordSection").classList.add("hidden");
+    document.getElementById("votingSection").classList.remove("hidden");
+
+    document.getElementById("finalWord").innerText = secretWord;
+    document.getElementById("finalHint").innerText = imposterHint;
+
+    const list = document.getElementById("voteList");
+    list.innerHTML = "";
+    votes = {};
+
+    const candidates = revotePlayers || players;
+
+    document.getElementById("voteTitle").innerText =
+        revotePlayers ? `Revote Round ${voteRound} – Who is the Imposter?` : "Who is the Imposter?";
+
+    candidates.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "playerVote";
+        div.innerText = p;
+        div.dataset.name = p; // store original name
+
+        div.onclick = () => {
+            play(sfxVote);
+
+            // Clear previous selections and reset text
+            document.querySelectorAll(".playerVote").forEach(el => {
+                el.classList.remove("selectedVote", "votePop");
+                el.innerText = el.dataset.name;
+            });
+
+            // Mark this one selected
+            div.classList.add("selectedVote");
+
+            // Count vote
+            votes[p] = (votes[p] || 0) + 1;
+
+            // Update text with live count
+            div.innerText = `${p} — ${votes[p]} vote${votes[p] > 1 ? "s" : ""}`;
+
+            // Trigger bounce pop animation
+            div.classList.remove("votePop");
+            void div.offsetWidth; // restart animation
+            div.classList.add("votePop");
+        };
+
+        list.appendChild(div);
+    });
+}
+
+function finishVoting() {
+    play(sfxClick);
+
+    // Count votes
+    let maxVotes = 0;
+    let leaders = [];
+
+    for (let p in votes) {
+        if (votes[p] > maxVotes) {
+            maxVotes = votes[p];
+            leaders = [p];
+        } else if (votes[p] === maxVotes) {
+            leaders.push(p);
+        }
+    }
+
+    // No votes at all
+    if (Object.keys(votes).length === 0) {
+        alert("Nobody voted. Revote!");
+        revotePlayers = revotePlayers || players;
+        voteRound++;
+        startVoting();
+        return;
+    }
+
+    // Tie
+    if (leaders.length > 1) {
+        alert("Tie detected! Revote between: " + leaders.join(", "));
+        revotePlayers = leaders;
+        voteRound++;
+        startVoting();
+        return;
+    }
+
+    // Clear revote state
+    revotePlayers = null;
+    voteRound = 1;
+
+    // Winner
+    const winner = leaders[0];
+
+    document.getElementById("votingSection").classList.add("hidden");
+    document.getElementById("summarySection").classList.remove("hidden");
+
+    document.getElementById("summaryWord").innerText = secretWord;
+    document.getElementById("summaryHint").innerText = imposterHint;
+    document.getElementById("summaryImposters").innerText =
+        imposters.map(i => players[i]).join(", ");
+
+    let result = "";
+    for (let p in votes) {
+        result += `${p}: ${votes[p]} vote(s)<br>`;
+    }
+    result += `<br><strong>Chosen suspect: ${winner}</strong>`;
+
+    document.getElementById("voteResults").innerHTML = result;
+}
+</script>
+
 </body>
 </html>
+
